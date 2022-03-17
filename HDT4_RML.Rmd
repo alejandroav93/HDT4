@@ -95,172 +95,73 @@ MiscFeature -\> Variable categórica\
 MiscVal -\> Variable continua MoSold -\> Variable discreta YrSold -\> Variable discreta SaleType -\> Variable categórica\
 SaleCondition -\> Variable categórica\
 SalePrice -\> Variable discreta\
-##----Exploración del Set de datos----##
 
-Resumen del set de datos
 
 ```{r}
-summary(house)
-```
-
-Se crea un conteo de columnas y observaciones (filas) del conjunto de datos
-
-```{r}
-#ncol count -> col variable
-col <- ncol(house)
-#Print
-```
-
-```{r}
-cat("El número de columnas para el conjunto de datos es de :", col, "\n")
-#nrow count -> row variable
-row <- nrow(house)
-#Print
-cat("El número de observaciones para el conjunto de datos es de :", row)
-```
-
-Top 30 de casas vendidas con precios más altos (siendo la más alta de \$755,000)
-
-```{r}
-top10 <- arrange(house, desc(house$SalePrice))
-head (select(top10, "Neighborhood", "SalePrice"),30)
-```
-
-Ventas por Areas/vecindarios ordenados de mayor a menor, siendo la de más incidencia North Ames
-
-```{r}
-byneighborhood <- house %>% group_by(house$Neighborhood) %>% summarise(freq=n()) %>% ungroup()
-byneighborhood <- arrange(byneighborhood, desc(byneighborhood$freq))
-print(as_tibble(byneighborhood), n = 25)
-```
-
-Ventas por año ordenados de mayor a menor, siendo el año con mayor ventas 2009
-
-```{r}
-yearly <- house %>% group_by(house$YrSold) %>% summarise(freq=n()) %>% ungroup()
-yearly <- arrange(yearly, desc(yearly$freq))
-print(as_tibble(yearly), n = 10)
-```
-
-Ventas según la condición de la vivienda. Habiendo una diferencia significativa con una tendencia de inclinación a las de condición intermedia (5).
-
-```{r}
-conditions <- house %>% group_by(house$OverallCond) %>% summarise(freq=n()) %>% ungroup()
-conditions <- arrange(conditions, desc(conditions$freq))
-print(as_tibble(conditions), n = 10)
-```
-
-Gráfico de ventas por año y ventas anuales segun condición de la vivienda. Se puede observar que hay una consistencia en el número de ventas anuales de viviendas, con un descenso en el año 2010. Adicionalmente, pudimos confirmar que en efecto las casas de condición intermedia (5) fueron las más vendidas a través de los años.
-
-```{r}
-counts0 <- table(house$YrSold)
-barplot(counts0, main="Sales Distribution",
-   xlab="Year of Sell")
-
-counts <- table(house$YrSold, house$OverallCond)
-barplot(counts, main="House Condition and Year of Sell",
-  xlab="House Condition", col=c("darkblue","red", "yellow", "cyan", "green"),
-  legend = rownames(counts), beside=TRUE)
-```
-
-Planteamiento de pregunta: La calidad de la casa tiene alguna correlación con el precio de venta? Observando el gráfico de dispersion podemos observar que no existe tal relación y que la decisión es influida por otros factores
-
-```{r}
-scatterplot(house$SalePrice ~  house$OverallQual, data = house, smoother = FALSE, grid = FALSE, frame = FALSE)
-```
-
-Planteamiento de pregunta: La condición tiene alguna correlación con el precio de venta? Observando el gráfico de dispersion podemos observar que no existe tal relación y que la decisión es influida por otros factores
-
-```{r}
-scatterplot(house$SalePrice ~  house$OverallCond, data = house, smoother = FALSE, grid = FALSE, frame = FALSE)
-```
-
-División de los cuartiles en precios de venta de las casas
-
-```{r}
+set.seed(123)
 quant <- quantile(house$SalePric)
 quant
-```
-
-##---CLUSTERING DE VARIABLES---## Variables seleccionadas para agrupación: *OverallQual\
-*OverallCond\
-*GrLivArea\
-*BedroomAbvGr *TotRmsAbvGrd\
-*GarageCars\
-*SalePrice* YearBuilt \*LotArea
-
-Se calcula el valor del estadístico de Hopkins.
-
-```{r calculo del estadistico de Hopkins,  message=FALSE,warning=FALSE}
-clusterhouse <- fread("./train.csv", select = c("OverallQual","OverallCond" ,"GrLivArea", "BedroomAbvGr", "TotRmsAbvGrd", "GarageCars", "SalePrice", "YearBuilt", "LotArea", "LotFrontage"))
-clusterhouse$LotFrontage[is.na(clusterhouse$LotFrontage)]<-0.0
-set.seed(123)
-clusterhouse<-clusterhouse[complete.cases("./train.csv")]
-clusterhouse<-scale(clusterhouse)
-hopkins(clusterhouse)
-```
-
-Dado que estadistico de Hopkings esta bastante alejado de 0.5 se puede inferir que los datos no son aleatorios hay altas posibilidades de que sea factible el agrupamiento de las variables seleccionadas.
-
-```{r VAT , message=FALSE,warning=FALSE}
-clusterhouse_dist <- dist(clusterhouse)
-fviz_dist(clusterhouse_dist, show_labels = F)
-```
-
-Como se puede observar en la VAT sí se observan patrones por lo que es factible el agrupamiento, confirmando el valor obtenido con el estadístico de Hopkings.
-
-Se procede a realizar la prueba de codo para poder determinar un número de agrupaciones factibles.
-
-```{r}
-fviz_nbclust(clusterhouse, kmeans, method = "wss") +
-labs(subtitle = "Elbow method")
-```
-
-Se procede a realizar la prueba de silueta para poder comparar con el método de codo realizado con anterioridad y poder determinar un número de agrupaciones factibles.
-
-```{r}
-fviz_nbclust(clusterhouse, kmeans, method = "silhouette") +
-labs(subtitle = "Silhouette method")
-```
-
-```{r, message=FALSE,warning=FALSE}
-km<-kmeans(clusterhouse,2,iter.max =100)
-clusterhouse$grupo<-km$cluster
-```
-
-```{r}
-km
-```
-
-```{r}
-km$size
-```
-
-```{r}
-hc<-hclust(clusterhouse_dist, method = "ward.D2") 
-plot(hc, cex=0.5, axes=FALSE) #Genera el dendograma
-rect.hclust(hc,k=2)
-```
-
-```{r}
-set.seed(123)
 #se toman las variables que se cree predicen propiamente el precio de la casa y el precio real de la casa.
 #luego se reemplaza la columna del precio de la casa por una que lo clasifica como economica, intermedio o cara dependiendo de los percentiles.
 data <- fread("./train.csv", select = c("OverallQual","OverallCond" ,"GrLivArea", "BedroomAbvGr", "TotRmsAbvGrd", "GarageCars", "SalePrice", "YearBuilt", "LotArea", "LotFrontage"))
-data <- data %>% mutate(PriceRange = if_else(quant["0%"] <= SalePrice & SalePrice < quant["25%"], "Economica", 
+
+data2 <- data %>% mutate(PriceRange = if_else(quant["0%"] <= SalePrice & SalePrice < quant["25%"], "Economica", 
                                               if_else(quant["25%"] <= SalePrice & SalePrice < quant["50%"], "Intermedia", "Cara") ))
-data$SalePrice <- NULL
+data2$SalePrice <- NULL
 
-data$LotFrontage[is.na(data$LotFrontage)]<-0.0
+data2$LotFrontage[is.na(data2$LotFrontage)]<-0.0
 
-trainRowsNumber <- sample(1:nrow(data), 0.7*nrow(data))
-train<-data[trainRowsNumber,]
-test<-data[-trainRowsNumber,]
-arbolModelo <- rpart(PriceRange~.,data,method = "class")
+trainRowsNumber <- sample(1:nrow(data2), 0.7*nrow(data2))
+train<-data2[trainRowsNumber,]
+test<-data2[-trainRowsNumber,]
+arbolModelo <- rpart(PriceRange~.,data2,method = "class")
 rpart.plot(arbolModelo)
 ```
-
 ```{r}
+# Regresión Lineal Simple 
+porcentaje<-0.7
+
+
+set.seed(123)
+
+datos <- fread("./train.csv", select = c("OverallQual","GrLivArea", "GarageCars", "SalePrice", "YearBuilt"))
+split_ <- sample(nrow(datos),nrow(datos)*porcentaje)
+train1<-datos[split_,]
+test1<-datos[-split_,]
+train1
+
+fitLMPW<-lm(OverallQual~SalePrice, data = train1)
+#-------
+predL<-predict(fitLMPW, newdata = test1)
+#Verificando la predicción
+resultados<-data.frame(test$OverallQual,predL)
+
+#Análisis de residuos
+# Los residuos se calcula restando la predicción de la variable respuesta
+residuales <- test$OverallQual-predL
+#No obstante el modelo ya lo calcula por lo que se pueden usar
+# Si se mira el resumen del modelo podemos analizar el comportamiento de los residuos.
+summary(fitLMPW)
+
+#-----CORRELACIONES------#
+cor(data$OverallQual,data$SalePrice, method = "spearman")
+
+cor(data$GarageCars,data$SalePrice, method = "spearman")
+
+cor(data$GrLivArea,data$SalePrice, method = "spearman")
+
+cor(data$YearBuilt,data$SalePrice, method = "spearman")
+
+library(ModelMetrics)
+rmse(test1$OverallQual,predL)
+plot(test1$OverallQual, test1$SalePrice)
+points(predL, test1$SalePrice, col="red",pch=15)
+
+par(mfrow = c(2,2))
+plot(fitLMPW)
+
 
 ```
+
+
 
