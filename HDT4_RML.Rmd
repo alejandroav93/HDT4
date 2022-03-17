@@ -189,4 +189,21 @@ names(resultados1)<-c("real","prediccion")
 confusionMatrix(resultados1$real,resultados1$prediccion)
 ```
 
+```{r}
+start_time <- Sys.time()
+arbolModelo <- rpart(PriceRange~.,data2,method = "class")
+end_time <- Sys.time()
+tree_time <- end_time - start_time
+tree_time
+```
+
+```{r}
+start_time <- Sys.time()
+fitLMPW<-lm(OverallQual~SalePrice, data = train1)
+end_time <- Sys.time()
+linreg_time <- end_time - start_time
+linreg_time
+```
+
+
 
