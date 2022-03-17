@@ -118,50 +118,75 @@ arbolModelo <- rpart(PriceRange~.,data2,method = "class")
 rpart.plot(arbolModelo)
 ```
 ```{r}
-# Regresión Lineal Simple 
+#-----CORRELACIONES------#
+# Correlación de 80.98%
+cor(data$OverallQual,data$SalePrice, method = "spearman")
+# Correlación de 69.07%
+cor(data$GarageCars,data$SalePrice, method = "spearman")
+# Correlación de 73.13%
+cor(data$GrLivArea,data$SalePrice, method = "spearman")
+# Correlación de 65.26%
+cor(data$YearBuilt,data$SalePrice, method = "spearman")
+```
+
+
+```{r}
+#Se importa la libreria para poder hacer plots
+library(ModelMetrics)
+
 porcentaje<-0.7
-
-
+# Set Seed
 set.seed(123)
 
+#Lectura de Datos
 datos <- fread("./train.csv", select = c("OverallQual","GrLivArea", "GarageCars", "SalePrice", "YearBuilt"))
 split_ <- sample(nrow(datos),nrow(datos)*porcentaje)
+
+#Set de datos de entrenamiento y prueba
 train1<-datos[split_,]
 test1<-datos[-split_,]
-train1
 
+# Regresión Lineal Simple 
 fitLMPW<-lm(OverallQual~SalePrice, data = train1)
 #-------
 predL<-predict(fitLMPW, newdata = test1)
-#Verificando la predicción
-resultados<-data.frame(test$OverallQual,predL)
+
+#Verifición la predicción
+resultados<-data.frame(test1$OverallQual,predL)
 
 #Análisis de residuos
 # Los residuos se calcula restando la predicción de la variable respuesta
 residuales <- test$OverallQual-predL
-#No obstante el modelo ya lo calcula por lo que se pueden usar
-# Si se mira el resumen del modelo podemos analizar el comportamiento de los residuos.
+
+#Resumen de las pruebas de regresión lineal
 summary(fitLMPW)
 
-#-----CORRELACIONES------#
-cor(data$OverallQual,data$SalePrice, method = "spearman")
 
-cor(data$GarageCars,data$SalePrice, method = "spearman")
-
-cor(data$GrLivArea,data$SalePrice, method = "spearman")
-
-cor(data$YearBuilt,data$SalePrice, method = "spearman")
-
-library(ModelMetrics)
+# Regresión Lineal 
 rmse(test1$OverallQual,predL)
+# Se crea el gráfico de las variables seleccionadas para la regresión
 plot(test1$OverallQual, test1$SalePrice)
 points(predL, test1$SalePrice, col="red",pch=15)
-
 par(mfrow = c(2,2))
 plot(fitLMPW)
 
 
 ```
 
+```{r}
+
+#Predicción del precio de la casa 
+fitLMSpByPL<-lm(SalePrice~OverallQual, data = train1)
+summary(fitLMSpByPL)
+
+#El modelo explica los datos en un 61% por lo que el estadistico de prueba indica que hay una relación entre las variables pero no es un buen predictor
+
+predMSpByPL<-predict(fitLMSpByPL,newdata = test1)
+resultados1<-data.frame(test1$SalePrice,round(predMSpByPL,0))
+names(resultados1)<-c("real","prediccion")
+
+# Matriz de confusión
+confusionMatrix(resultados1$real,resultados1$prediccion)
+```
 
 
